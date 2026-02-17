@@ -1,0 +1,29 @@
+# ABGA SaaS Platform - Backend Dependencies
+
+# FastAPI Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+email-validator==2.1.1
+
+# Database
+motor==3.3.2
+pymongo==4.6.1
+
+# AI Providers
+openai==1.10.0
+google-generativeai>=0.4.0
+httpx==0.26.0
+
+# Security & Encryption
+cryptography==42.0.0
+python-dotenv==1.0.0
+bcrypt==4.1.2
+pyjwt==2.8.0
+
+# Email
+# Note: Using built-in smtplib for email sending
+
+# Utilities
+python-multipart==0.0.6
