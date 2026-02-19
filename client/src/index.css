@@ -1,0 +1,246 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 222 47% 3%;
+    --foreground: 210 40% 92%;
+
+    --card: 217 50% 8%;
+    --card-foreground: 210 40% 92%;
+
+    --popover: 217 50% 8%;
+    --popover-foreground: 210 40% 92%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 185 84% 53%;
+    --secondary-foreground: 222 47% 5%;
+
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 55%;
+
+    --accent: 239 84% 67%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 217 33% 18%;
+    --input: 217 33% 14%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    --neon-blue: 217 91% 60%;
+    --neon-cyan: 185 84% 53%;
+    --neon-indigo: 239 84% 67%;
+    --neon-purple: 258 90% 66%;
+
+    --glass-bg: 217 50% 8%;
+    --glass-border: 217 91% 60%;
+    --glass-blur: 20px;
+
+    --sidebar-background: 222 47% 4%;
+    --sidebar-foreground: 210 40% 85%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 12%;
+    --sidebar-accent-foreground: 210 40% 92%;
+    --sidebar-border: 217 33% 15%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    @apply bg-card/60 backdrop-blur-[20px] border border-white/[0.08] rounded-2xl;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-card-glow {
+    @apply glass-card;
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.15), 0 0 80px rgba(34, 211, 238, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .neon-glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.1);
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  }
+
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  }
+
+  .space-bg {
+    background: linear-gradient(180deg, #030712 0%, #020617 40%, #000814 100%);
+  }
+
+  .nebula-glow {
+    position: relative;
+  }
+
+  .nebula-glow::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(59, 130, 246, 0.12) 0%, rgba(34, 211, 238, 0.05) 40%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .metric-card-blue {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.12);
+  }
+
+  .metric-card-cyan {
+    border-color: rgba(34, 211, 238, 0.3);
+    box-shadow: 0 0 25px rgba(34, 211, 238, 0.12);
+  }
+
+  .metric-card-indigo {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.12);
+  }
+
+  .metric-card-purple {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.12);
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* React Big Calendar dark theme overrides */
+.rbc-calendar {
+  font-family: 'Inter', sans-serif;
+  color: hsl(var(--foreground));
+}
+
+.rbc-toolbar {
+  margin-bottom: 1rem;
+}
+
+.rbc-toolbar button {
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+  background: transparent;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button.rbc-active {
+  background: hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary));
+}
+
+.rbc-header {
+  border-bottom-color: hsl(var(--border));
+  padding: 0.5rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.8rem;
+}
+
+.rbc-month-view,
+.rbc-time-view {
+  border-color: hsl(var(--border));
+}
+
+.rbc-day-bg {
+  border-left-color: hsl(var(--border));
+}
+
+.rbc-off-range-bg {
+  background: hsl(var(--background) / 0.5);
+}
+
+.rbc-today {
+  background: hsl(var(--primary) / 0.08);
+}
+
+.rbc-event {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  padding: 2px 6px;
+}
+
+.rbc-month-row {
+  border-color: hsl(var(--border));
+}
+
+.rbc-date-cell {
+  color: hsl(var(--foreground));
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.rbc-time-content {
+  border-top-color: hsl(var(--border));
+}
+
+.rbc-timeslot-group {
+  border-bottom-color: hsl(var(--border));
+}
+
+.rbc-time-slot {
+  border-top-color: hsl(var(--border) / 0.5);
+}
+
+.rbc-time-header-content {
+  border-left-color: hsl(var(--border));
+}
+
+.rbc-time-gutter .rbc-label {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+}
