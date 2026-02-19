@@ -6,6 +6,7 @@ API endpoints for the production-ready AI Content Composer.
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Literal, Optional, List
+from datetime import datetime
 import logging
 
 from app.services.llm_service import llm_service
@@ -182,4 +183,18 @@ async def get_drafts(user_id: str):
         return drafts
     except Exception as e:
         logger.error(f"Failed to fetch drafts: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/scheduled/{user_id}", response_model=List[Post])
+async def get_scheduled_posts(user_id: str):
+    """Retrieves all scheduled posts for a given user, sorted by scheduled_at asc"""
+    try:
+        from app.database.mongodb import mongodb
+        cursor = mongodb.posts.find({"user_id": user_id, "status": "scheduled"}).sort("scheduled_at", 1)
+        posts = await cursor.to_list(length=100)
+        for p in posts:
+            p["_id"] = str(p["_id"])
+        return posts
+    except Exception as e:
+        logger.error(f"Failed to fetch scheduled posts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
