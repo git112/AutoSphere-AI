@@ -93,3 +93,49 @@ class TokenResponse(BaseModel):
 class RefreshTokenRequest(BaseModel):
     """Refresh token request"""
     refresh_token: str = Field(..., description="Refresh token")
+
+
+# ── OTP Models (new — appended below existing models) ────────────────────────
+
+class SendOtpRequest(BaseModel):
+    """Request to send an OTP email"""
+    email: EmailStr = Field(..., description="User email address")
+    purpose: str = Field(..., description="'signup' or 'password_reset'")
+    name: str = Field(default="User", description="User name for the email greeting")
+
+
+class VerifySignupOtpRequest(BaseModel):
+    """Verify OTP to activate a newly created account"""
+    email: EmailStr = Field(..., description="User email address")
+    otp: str = Field(..., min_length=6, max_length=6, description="6-digit OTP code")
+
+
+class VerifyPasswordResetOtpRequest(BaseModel):
+    """Verify OTP and set a new password"""
+    email: EmailStr = Field(..., description="User email address")
+    otp: str = Field(..., min_length=6, max_length=6, description="6-digit OTP code")
+    new_password: str = Field(..., min_length=8, max_length=100, description="New password")
+
+    @validator('new_password')
+    def validate_password(cls, v):
+        """Validate new password strength"""
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one digit')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+            raise ValueError('Password must contain at least one special character')
+        return v
+
+
+class CheckEmailRequest(BaseModel):
+    """Check whether an email is registered"""
+    email: EmailStr = Field(..., description="Email to check")
+
+
+class CheckEmailResponse(BaseModel):
+    """Response for check-email endpoint"""
+    exists: bool
+

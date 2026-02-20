@@ -15,7 +15,13 @@ from app.models.auth import (
     VerifyEmailRequest,
     AuthResponse,
     TokenResponse,
-    RefreshTokenRequest
+    RefreshTokenRequest,
+    # OTP models (new)
+    SendOtpRequest,
+    VerifySignupOtpRequest,
+    VerifyPasswordResetOtpRequest,
+    CheckEmailRequest,
+    CheckEmailResponse,
 )
 from app.models.user import UserPublic
 from app.services.auth_service import auth_service
@@ -373,3 +379,136 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user: {str(e)}"
         )
+
+
+# ── OTP Routes (new — appended below existing routes) ────────────────────────
+
+from app.services.otp_service import otp_service
+from app.services.email_service import email_service
+
+
+@router.post("/send-otp", response_model=AuthResponse)
+async def send_otp(request: SendOtpRequest):
+    """
+    Send a 6-digit OTP to the user's email.
+    purpose: 'signup' | 'password_reset'
+    """
+    try:
+        if request.purpose not in ("signup", "password_reset"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid purpose. Must be 'signup' or 'password_reset'."
+            )
+
+        # For password_reset, verify email exists first
+        if request.purpose == "password_reset":
+            from app.database import get_db
+            db = get_db()
+            user_doc = await db["users"].find_one({"email": request.email})
+            if not user_doc:
+                # Return success to prevent email enumeration
+                return AuthResponse(
+                    success=True,
+                    message="If an account with this email exists, an OTP has been sent."
+                )
+            name = user_doc.get("name", "User")
+        else:
+            name = request.name
+
+        otp_code, error = await otp_service.send_otp(request.email, request.purpose)
+        if error:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=error)
+
+        sent = email_service.send_otp_email(request.email, name, otp_code, request.purpose)
+        if not sent:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to send OTP email. Please try again."
+            )
+
+        logger.info(f"OTP sent to {request.email} (purpose={request.purpose})")
+        return AuthResponse(success=True, message="OTP sent to your email. It expires in 5 minutes.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"send-otp failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/verify-signup-otp", response_model=AuthResponse)
+async def verify_signup_otp(request: VerifySignupOtpRequest):
+    """
+    Verify OTP and mark the user's email as verified (activates the account).
+    """
+    try:
+        success, error = await otp_service.verify_otp(request.email, request.otp, "signup")
+        if not success:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+        from app.database import get_db
+        from datetime import datetime
+        db = get_db()
+        result = await db["users"].update_one(
+            {"email": request.email},
+            {"$set": {"is_email_verified": True, "updated_at": datetime.utcnow()}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+        logger.info(f"Signup OTP verified for {request.email}")
+        return AuthResponse(success=True, message="Email verified successfully! You can now sign in.")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"verify-signup-otp failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/verify-password-reset-otp", response_model=AuthResponse)
+async def verify_password_reset_otp(request: VerifyPasswordResetOtpRequest):
+    """
+    Verify OTP and update the user's password (forgot-password flow).
+    """
+    try:
+        success, error = await otp_service.verify_otp(request.email, request.otp, "password_reset")
+        if not success:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error)
+
+        from app.database import get_db
+        from app.utils.password import password_service
+        from datetime import datetime
+        db = get_db()
+        new_hash = password_service.hash_password(request.new_password)
+        result = await db["users"].update_one(
+            {"email": request.email},
+            {"$set": {"password_hash": new_hash, "updated_at": datetime.utcnow()}}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+        logger.info(f"Password reset via OTP for {request.email}")
+        return AuthResponse(success=True, message="Password updated successfully 🚀")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"verify-password-reset-otp failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+@router.post("/check-email", response_model=CheckEmailResponse)
+async def check_email(request: CheckEmailRequest):
+    """
+    Check whether an email address is registered.
+    Used by the frontend to redirect unregistered users to signup.
+    """
+    try:
+        from app.database import get_db
+        db = get_db()
+        user_doc = await db["users"].find_one({"email": request.email}, {"_id": 1})
+        return CheckEmailResponse(exists=user_doc is not None)
+    except Exception as e:
+        logger.error(f"check-email failed: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

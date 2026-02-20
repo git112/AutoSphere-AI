@@ -1,10 +1,11 @@
 import { useAppStore } from '@/stores/appStore';
 import { useAuthStore } from '@/stores/authStore';
-import { Menu, Bell, Search, Zap, LogOut } from 'lucide-react';
+import { Menu, Bell, Search, Zap, LogOut, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Topbar = () => {
-  const { toggleSidebar, systemOperational } = useAppStore();
+  const { toggleSidebar, systemOperational, theme, toggleTheme } = useAppStore();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -43,6 +44,39 @@ const Topbar = () => {
           <span className="hidden sm:inline">{systemOperational ? 'System Online' : 'System Offline'}</span>
         </div>
 
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors overflow-hidden"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {theme === 'dark' ? (
+              <motion.span
+                key="sun"
+                initial={{ opacity: 0, rotate: -90, scale: 0.6 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: 90, scale: 0.6 }}
+                transition={{ duration: 0.2 }}
+                className="block"
+              >
+                <Sun className="w-5 h-5" />
+              </motion.span>
+            ) : (
+              <motion.span
+                key="moon"
+                initial={{ opacity: 0, rotate: 90, scale: 0.6 }}
+                animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                exit={{ opacity: 0, rotate: -90, scale: 0.6 }}
+                transition={{ duration: 0.2 }}
+                className="block"
+              >
+                <Moon className="w-5 h-5" />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
+
         <button className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary animate-pulse-glow" />
@@ -65,3 +99,4 @@ const Topbar = () => {
 };
 
 export default Topbar;
+

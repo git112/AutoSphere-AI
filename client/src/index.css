@@ -5,7 +5,60 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @layer base {
+
+  /* ── Light mode (default) ─────────────────────────────── */
   :root {
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 217 91% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 185 70% 40%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 14% 92%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 239 84% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 86%;
+    --input: 220 14% 92%;
+    --ring: 217 91% 55%;
+
+    --radius: 0.75rem;
+
+    --neon-blue: 217 91% 55%;
+    --neon-cyan: 185 70% 40%;
+    --neon-indigo: 239 84% 60%;
+    --neon-purple: 258 90% 60%;
+
+    --glass-bg: 0 0% 100%;
+    --glass-border: 217 91% 55%;
+    --glass-blur: 20px;
+
+    --sidebar-background: 220 20% 98%;
+    --sidebar-foreground: 222 47% 20%;
+    --sidebar-primary: 217 91% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 93%;
+    --sidebar-accent-foreground: 222 47% 15%;
+    --sidebar-border: 220 13% 88%;
+    --sidebar-ring: 217 91% 55%;
+  }
+
+  /* ── Dark mode ────────────────────────────────────────── */
+  .dark {
     --background: 222 47% 3%;
     --foreground: 210 40% 92%;
 
@@ -34,8 +87,6 @@
     --input: 217 33% 14%;
     --ring: 217 91% 60%;
 
-    --radius: 0.75rem;
-
     --neon-blue: 217 91% 60%;
     --neon-cyan: 185 84% 53%;
     --neon-indigo: 239 84% 67%;
@@ -56,6 +107,7 @@
   }
 }
 
+
 @layer base {
   * {
     @apply border-border;
@@ -66,19 +118,33 @@
     font-family: 'Inter', sans-serif;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Space Grotesk', sans-serif;
   }
 }
 
 @layer utilities {
   .glass-card {
-    @apply bg-card/60 backdrop-blur-[20px] border border-white/[0.08] rounded-2xl;
+    @apply bg-card/80 backdrop-blur-[20px] border border-border rounded-2xl;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .glass-card {
+    @apply bg-card/60;
     box-shadow: 0 0 30px rgba(59, 130, 246, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
   .glass-card-glow {
     @apply glass-card;
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.12), 0 0 80px rgba(34, 211, 238, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .dark .glass-card-glow {
     box-shadow: 0 0 40px rgba(59, 130, 246, 0.15), 0 0 80px rgba(34, 211, 238, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
@@ -96,6 +162,10 @@
   }
 
   .space-bg {
+    background: hsl(var(--background));
+  }
+
+  .dark .space-bg {
     background: linear-gradient(180deg, #030712 0%, #020617 40%, #000814 100%);
   }
 

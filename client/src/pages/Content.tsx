@@ -25,6 +25,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { generateFullPost, getDrafts, updatePost } from '@/services/contentService';
 import type { FullPostRequest, FullPostResponse, Post } from '@/services/contentService';
 import { toast } from 'sonner';
+import { todayIST, nowTimeIST, nextHourIST, formatTimeIST } from '@/lib/dateUtils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants & Types
@@ -134,16 +135,11 @@ interface ScheduleModalProps {
 }
 
 const ScheduleModal = ({ open, onClose, onConfirm, isSubmitting }: ScheduleModalProps) => {
-  const todayStr = new Date().toISOString().split('T')[0];
-  const nowTimeStr = new Date().toTimeString().slice(0, 5);
+  const todayStr = todayIST();
+  const nowTimeStr = nowTimeIST();
 
   const [date, setDate] = useState(todayStr);
-  const [time, setTime] = useState(() => {
-    // Default to next hour
-    const d = new Date();
-    d.setHours(d.getHours() + 1, 0, 0, 0);
-    return d.toTimeString().slice(0, 5);
-  });
+  const [time, setTime] = useState(() => nextHourIST());
   const [err, setErr] = useState('');
 
   if (!open) return null;
@@ -273,9 +269,12 @@ const Content = () => {
   const [editHash, setEditHash] = useState('');
   const [editCta, setEditCta] = useState('');
   const [regenCount, setRegenCount] = useState(0);
-  const [copied, setCopied] = useState<'caption' | 'full' | null>(null);
+  const [copied, setCopied] = useState<'caption' | 'full' | 'formatted' | null>(null);
   const [apiError, setApiError] = useState('');
   const lastReq = useRef<FullPostRequest | null>(null);
+
+  // ── Formatted preview tab ─────────────────────────────────────────────────
+  const [formattedTab, setFormattedTab] = useState<'linkedin' | 'instagram'>('linkedin');
 
   // ── Schedule ──────────────────────────────────────────────────────────────
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -464,10 +463,17 @@ const Content = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result]);
 
-  const handleCopy = async (type: 'caption' | 'full') => {
-    const text = type === 'caption'
-      ? editCap
-      : `${editCap}\n\n${editHash}\n\n${editCta}`;
+  const handleCopy = async (type: 'caption' | 'full' | 'formatted') => {
+    let text: string;
+    if (type === 'caption') {
+      text = editCap;
+    } else if (type === 'formatted') {
+      text = result?.formatted[formattedTab] ?? `${editCap}\n\n${editHash}\n\n${editCta}`;
+    } else {
+      // 'full' — use the platform-formatted output that matches the selected platform
+      const key = platform.toLowerCase() as 'linkedin' | 'instagram';
+      text = result?.formatted[key] ?? `${editCap}\n\n${editHash}\n\n${editCta}`;
+    }
     await navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(null), 2000);
@@ -507,9 +513,7 @@ const Content = () => {
   const hasResult = !!result;
   const regenLeft = MAX_REGEN - regenCount;
 
-  const formatTime = (d: Date) =>
-    d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) +
-    ' · ' + d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  const formatTime = (d: Date) => formatTimeIST(d);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -796,19 +800,43 @@ const Content = () => {
                         </div>
                       )}
 
-                      {/* Platform preview */}
-                      <div className="rounded-xl bg-muted/20 border border-border/50 p-4 space-y-3">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Platform Preview</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {[
-                            { icon: <Linkedin className="w-3 h-3" />, label: 'LinkedIn', text: result!.formatted.linkedin },
-                            { icon: <Instagram className="w-3 h-3" />, label: 'Instagram', text: result!.formatted.instagram },
-                          ].map(({ icon, label, text }) => (
-                            <div key={label} className="space-y-1">
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
-                              <p className="text-xs text-foreground/80 leading-relaxed bg-background/40 rounded-lg p-2.5 max-h-24 overflow-y-auto">{text}</p>
-                            </div>
-                          ))}
+                      {/* Platform Formatted Preview — tabbed */}
+                      <div className="rounded-xl bg-muted/20 border border-border/50 overflow-hidden">
+                        {/* Tab bar */}
+                        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-border/40">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setFormattedTab('linkedin')}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${formattedTab === 'linkedin'
+                                ? 'bg-primary/15 text-primary border border-primary/30'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                                }`}
+                            >
+                              <Linkedin className="w-3 h-3" />LinkedIn
+                            </button>
+                            <button
+                              onClick={() => setFormattedTab('instagram')}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${formattedTab === 'instagram'
+                                ? 'bg-primary/15 text-primary border border-primary/30'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                                }`}
+                            >
+                              <Instagram className="w-3 h-3" />Instagram
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => handleCopy('formatted')}
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
+                          >
+                            {copied === 'formatted' ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                            {copied === 'formatted' ? 'Copied!' : 'Copy Formatted'}
+                          </button>
+                        </div>
+                        {/* Content */}
+                        <div className="p-4 max-h-48 overflow-y-auto">
+                          <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap font-mono">
+                            {formattedTab === 'linkedin' ? result!.formatted.linkedin : result!.formatted.instagram}
+                          </p>
                         </div>
                       </div>
 
@@ -982,16 +1010,34 @@ const Content = () => {
                               </p>
                               <p className="text-sm text-foreground/80 bg-background/40 rounded-lg p-2.5">{item.editedCta}</p>
                             </div>
+                            {/* Formatted output */}
+                            {item.result.formatted && (
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                                  {item.platform === 'LinkedIn'
+                                    ? <Linkedin className="w-3 h-3" />
+                                    : <Instagram className="w-3 h-3" />}
+                                  Formatted ({item.platform})
+                                </p>
+                                <p className="text-xs text-foreground/80 bg-background/40 rounded-lg p-2.5 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto leading-relaxed">
+                                  {item.platform === 'LinkedIn'
+                                    ? item.result.formatted.linkedin
+                                    : item.result.formatted.instagram}
+                                </p>
+                              </div>
+                            )}
                             {/* Copy from history */}
                             <button
                               onClick={async () => {
-                                const text = `${item.editedCaption}\n\n${item.editedHashtags}\n\n${item.editedCta}`;
+                                const key = item.platform.toLowerCase() as 'linkedin' | 'instagram';
+                                const text = item.result.formatted?.[key]
+                                  ?? `${item.editedCaption}\n\n${item.editedHashtags}\n\n${item.editedCta}`;
                                 await navigator.clipboard.writeText(text);
                                 toast.success('Copied from history!');
                               }}
                               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors px-2 py-1 rounded-lg hover:bg-primary/10"
                             >
-                              <Copy className="w-3 h-3" />Copy full post
+                              <Copy className="w-3 h-3" />Copy formatted post
                             </button>
                           </div>
                         </motion.div>

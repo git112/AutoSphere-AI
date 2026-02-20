@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { getScheduledPosts } from '@/services/contentService';
 import type { Post } from '@/services/contentService';
+import { formatScheduledIST } from '@/lib/dateUtils';
 
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
@@ -37,13 +38,10 @@ const platformIcon = (p: string) =>
   p === 'LinkedIn' ? <Linkedin className="w-3.5 h-3.5" /> :
     p === 'Instagram' ? <Instagram className="w-3.5 h-3.5" /> : null;
 
-const formatScheduled = (iso: string) => {
-  const d = new Date(iso);
-  return {
-    date: d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
-    time: d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-  };
-};
+const formatScheduled = (iso: string) => formatScheduledIST(iso);
+
+/** Strip the length-prompt suffix stored in topics, e.g. " [Write a medium-length post ...]" */
+const cleanTopic = (topic: string) => topic.replace(/\s*\[Write a[^\]]*\]/i, '').trim();
 
 const Scheduler = () => {
   const { user } = useAuthStore();
@@ -64,7 +62,8 @@ const Scheduler = () => {
     .map((p) => {
       const start = new Date(p.scheduled_at!);
       const end = new Date(start.getTime() + 30 * 60 * 1000);
-      return { title: `${p.platform}: ${p.topic.slice(0, 40)}`, start, end };
+      const label = cleanTopic(p.topic);
+      return { title: `${p.platform}: ${label.slice(0, 45)}`, start, end };
     });
 
   const allEvents = [...staticEvents, ...scheduledEvents];

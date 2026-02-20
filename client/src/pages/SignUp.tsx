@@ -1,26 +1,89 @@
 import { motion } from 'framer-motion';
-import { Orbit, Mail, Lock, User, Chrome, AlertCircle, Loader2 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { Orbit, Mail, Lock, User, Chrome, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import * as authService from '@/services/authService';
+import OtpModal from '@/components/OtpModal';
+import { AxiosError } from 'axios';
 
 const SignUp = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // OTP modal states
+  const [otpOpen, setOtpOpen] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [otpSuccess, setOtpSuccess] = useState(false);
+
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signup, isLoading, error, clearError } = useAuthStore();
 
+  // Read ?message=account_not_found from URL (redirected from Login)
+  const redirectMessage = searchParams.get('message');
+  const accountNotFoundMsg =
+    redirectMessage === 'account_not_found'
+      ? "Account not found. Please create a new account."
+      : null;
+
+  // OTP resend handler
+  const handleSendOtp = async () => {
+    setOtpSending(true);
+    setOtpError(null);
+    try {
+      await authService.sendOtp(email, 'signup', name);
+    } catch (err) {
+      const errMsg =
+        err instanceof AxiosError
+          ? err.response?.data?.detail ?? 'Failed to send OTP'
+          : 'Failed to send OTP';
+      setOtpError(errMsg);
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  // Signup form submit → create account → send OTP → open modal
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
     try {
       await signup(email, password, name);
-      toast.success('Account created! Please check your email to verify your account.');
-      navigate('/login');
+      // Account created — now send OTP
+      setOtpError(null);
+      setOtpSuccess(false);
+      setOtpOpen(true);
+      await handleSendOtp();
     } catch {
       // error is already set in the store
+    }
+  };
+
+  // OTP verify handler
+  const handleVerifyOtp = async (otp: string) => {
+    setOtpVerifying(true);
+    setOtpError(null);
+    try {
+      await authService.verifySignupOtp(email, otp);
+      setOtpSuccess(true);
+      toast.success('Account verified successfully! Welcome to AutoSphere 🚀');
+      setTimeout(() => {
+        setOtpOpen(false);
+        navigate('/login');
+      }, 1800);
+    } catch (err) {
+      const errMsg =
+        err instanceof AxiosError
+          ? err.response?.data?.detail ?? 'Invalid OTP. Please try again.'
+          : 'Invalid OTP. Please try again.';
+      setOtpError(errMsg);
+    } finally {
+      setOtpVerifying(false);
     }
   };
 
@@ -47,6 +110,18 @@ const SignUp = () => {
             <h1 className="text-2xl font-display font-bold gradient-text">Create Account</h1>
             <p className="text-muted-foreground text-sm mt-1">Start your free trial today</p>
           </div>
+
+          {/* Account-not-found banner (redirected from login) */}
+          {accountNotFoundMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-start gap-2.5 p-3 mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm"
+            >
+              <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{accountNotFoundMsg}</span>
+            </motion.div>
+          )}
 
           {/* Error message */}
           {error && (
@@ -120,13 +195,13 @@ const SignUp = () => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || otpSending}
               className="w-full h-11 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transition-all duration-300 mt-2 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isLoading || otpSending ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating account…
+                  {isLoading ? 'Creating account…' : 'Sending OTP…'}
                 </>
               ) : (
                 'Create Account'
@@ -160,6 +235,23 @@ const SignUp = () => {
           </p>
         </div>
       </motion.div>
+
+      {/* OTP Modal */}
+      <OtpModal
+        isOpen={otpOpen}
+        email={email}
+        purpose="signup"
+        title="Verify Your Email"
+        description="We sent a 6-digit verification code to"
+        isVerifying={otpVerifying}
+        isSending={otpSending}
+        error={otpError}
+        success={otpSuccess}
+        successMessage="Account verified! Redirecting to sign in…"
+        onVerify={handleVerifyOtp}
+        onResend={handleSendOtp}
+        onClose={() => setOtpOpen(false)}
+      />
     </div>
   );
 };

@@ -226,5 +226,75 @@ class EmailService:
         return self.send_email(to_email, "Verify Your Email - ABGA SaaS", html_content)
 
 
+    def send_otp_email(self, to_email: str, name: str, otp: str, purpose: str) -> bool:
+        """
+        Send OTP email for signup verification or password reset.
+
+        Args:
+            to_email: Recipient email address
+            name:     Recipient name
+            otp:      6-digit OTP code
+            purpose:  'signup' | 'password_reset'
+
+        Returns:
+            True if sent successfully
+        """
+        if purpose == "password_reset":
+            subject = "Password Reset OTP — AutoSphere"
+            heading = "Reset Your Password 🔐"
+            body_text = "You requested a password reset for your AutoSphere account."
+            action_text = "Use the OTP below to set a new password:"
+        else:
+            subject = "Verify Your Account — AutoSphere"
+            heading = "Verify Your Email ✉️"
+            body_text = "Thank you for signing up! One last step — verify your email address."
+            action_text = "Enter the OTP below to activate your account:"
+
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+                .otp-box {{ background: #1a1a2e; border: 2px solid #667eea; border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0; }}
+                .otp-code {{ font-size: 42px; font-weight: bold; letter-spacing: 12px; color: #a78bfa; font-family: monospace; }}
+                .expiry {{ font-size: 13px; color: #999; margin-top: 10px; }}
+                .warning {{ background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 16px; margin: 20px 0; border-radius: 4px; font-size: 14px; }}
+                .footer {{ text-align: center; margin-top: 20px; color: #888; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>{heading}</h1>
+                </div>
+                <div class="content">
+                    <h2>Hello {name}!</h2>
+                    <p>{body_text}</p>
+                    <p>{action_text}</p>
+                    <div class="otp-box">
+                        <div class="otp-code">{otp}</div>
+                        <div class="expiry">⏱ This OTP expires in <strong>5 minutes</strong></div>
+                    </div>
+                    <div class="warning">
+                        ⚠️ <strong>Do not share this OTP</strong> with anyone. AutoSphere will never ask for your OTP via phone or chat.
+                    </div>
+                    <p>If you did not request this, you can safely ignore this email.</p>
+                    <p>Best regards,<br>The AutoSphere Team</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 AutoSphere. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        return self.send_email(to_email, subject, html_content)
+
+
 # Singleton instance
 email_service = EmailService()

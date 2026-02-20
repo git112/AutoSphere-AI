@@ -126,3 +126,65 @@ export const getMe = async (): Promise<AuthResponse> => {
     const { data } = await api.get<AuthResponse>('/api/auth/me');
     return data;
 };
+
+// ── OTP API calls (new) ───────────────────────────────────────────────────────
+
+export interface CheckEmailResponse {
+    exists: boolean;
+}
+
+/**
+ * POST /api/auth/check-email
+ * Returns { exists } — used to redirect unregistered users to signup
+ */
+export const checkEmail = async (email: string): Promise<CheckEmailResponse> => {
+    const { data } = await api.post<CheckEmailResponse>('/api/auth/check-email', { email });
+    return data;
+};
+
+/**
+ * POST /api/auth/send-otp
+ * purpose: 'signup' | 'password_reset'
+ */
+export const sendOtp = async (
+    email: string,
+    purpose: 'signup' | 'password_reset',
+    name?: string
+): Promise<AuthResponse> => {
+    const { data } = await api.post<AuthResponse>('/api/auth/send-otp', {
+        email,
+        purpose,
+        name: name ?? 'User',
+    });
+    return data;
+};
+
+/**
+ * POST /api/auth/verify-signup-otp
+ * Verify OTP to activate a newly created account
+ */
+export const verifySignupOtp = async (
+    email: string,
+    otp: string
+): Promise<AuthResponse> => {
+    const { data } = await api.post<AuthResponse>('/api/auth/verify-signup-otp', { email, otp });
+    return data;
+};
+
+/**
+ * POST /api/auth/verify-password-reset-otp
+ * Verify OTP and set new password
+ */
+export const verifyPasswordResetOtp = async (
+    email: string,
+    otp: string,
+    new_password: string
+): Promise<AuthResponse> => {
+    const { data } = await api.post<AuthResponse>('/api/auth/verify-password-reset-otp', {
+        email,
+        otp,
+        new_password,
+    });
+    return data;
+};
+

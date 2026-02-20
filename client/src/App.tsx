@@ -15,6 +15,8 @@ import AgentControl from "./pages/AgentControl";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from "./stores/authStore";
+import { useAppStore } from "./stores/appStore";
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +26,28 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// ── Theme sync: applies/removes `dark` class on <html> whenever theme changes ──
+const ThemeSync = () => {
+  const { theme } = useAppStore();
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+  return null;
+};
+
+// Bootstrap: apply saved theme immediately before first render to avoid flash
+(() => {
+  const saved = localStorage.getItem('autosphere-theme') ?? 'dark';
+  if (saved === 'dark') document.documentElement.classList.add('dark');
+  else document.documentElement.classList.remove('dark');
+})();
+
 
 // ── Auth initializer: restores session from localStorage on app mount ─────────
 const AuthInitializer = ({ children }: { children: React.ReactNode }) => {
@@ -58,6 +82,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <ThemeSync />
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -87,3 +112,4 @@ const App = () => (
 );
 
 export default App;
+
