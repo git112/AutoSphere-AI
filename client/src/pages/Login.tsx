@@ -2,10 +2,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Orbit, Mail, Lock, Chrome, AlertCircle, Loader2,
   KeyRound, ArrowLeft, Eye, EyeOff, CheckCircle2,
+  Sun, Moon,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuthStore } from '@/stores/authStore';
+import { useAppStore } from '@/stores/appStore';
 import { toast } from 'sonner';
 import * as authService from '@/services/authService';
 import OtpModal from '@/components/OtpModal';
@@ -348,6 +350,7 @@ const Login = () => {
 
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
+  const { theme, toggleTheme } = useAppStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,6 +381,27 @@ const Login = () => {
       {/* Extra glow orbs */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-neon-cyan/5 rounded-full blur-3xl" />
+
+      {/* Theme toggle — top-right corner */}
+      <motion.button
+        onClick={toggleTheme}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.93 }}
+        aria-label="Toggle theme"
+        className="absolute top-4 right-4 z-20 w-10 h-10 rounded-xl border border-border bg-card/70 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-card transition-all duration-200"
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {theme === 'dark' ? (
+            <motion.span key="sun" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+              <Sun className="w-4 h-4" />
+            </motion.span>
+          ) : (
+            <motion.span key="moon" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
+              <Moon className="w-4 h-4" />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
 
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}

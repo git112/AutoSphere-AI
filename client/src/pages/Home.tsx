@@ -1,6 +1,7 @@
-import { motion } from 'framer-motion';
-import { Orbit, Zap, Bot, BarChart3, Calendar, Shield, ArrowRight, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Orbit, Zap, Bot, BarChart3, Calendar, Shield, ArrowRight, Sparkles, Sun, Moon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAppStore } from '@/stores/appStore';
 
 const features = [
   {
@@ -31,6 +32,8 @@ const fadeUp = {
 };
 
 const Home = () => {
+  const { theme, toggleTheme } = useAppStore();
+
   return (
     <div className="min-h-screen space-bg nebula-glow relative overflow-hidden">
       {/* Ambient glow orbs */}
@@ -46,6 +49,27 @@ const Home = () => {
           <span className="text-lg font-display font-bold gradient-text">AutoSphere</span>
         </Link>
         <div className="flex items-center gap-3">
+          {/* Theme toggle */}
+          <motion.button
+            onClick={toggleTheme}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.93 }}
+            aria-label="Toggle theme"
+            className="w-9 h-9 rounded-xl border border-border bg-card/70 backdrop-blur-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-card transition-all duration-200"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {theme === 'dark' ? (
+                <motion.span key="sun" initial={{ opacity: 0, rotate: -90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: 90 }} transition={{ duration: 0.2 }}>
+                  <Sun className="w-4 h-4" />
+                </motion.span>
+              ) : (
+                <motion.span key="moon" initial={{ opacity: 0, rotate: 90 }} animate={{ opacity: 1, rotate: 0 }} exit={{ opacity: 0, rotate: -90 }} transition={{ duration: 0.2 }}>
+                  <Moon className="w-4 h-4" />
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
+
           <Link
             to="/login"
             className="h-9 px-5 rounded-xl border border-border text-sm text-foreground hover:bg-muted/40 transition-colors flex items-center"

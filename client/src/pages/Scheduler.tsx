@@ -1,5 +1,5 @@
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale/en-US';
@@ -7,24 +7,20 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import {
   Sparkles, AlertTriangle, Clock, Plus, Lightbulb, Bot,
   CalendarClock, Instagram, Linkedin, CheckCircle2, Loader2,
+  X, Trash2, Save, ExternalLink
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
-import { getScheduledPosts } from '@/services/contentService';
+import { getScheduledPosts, updatePost } from '@/services/contentService';
 import type { Post } from '@/services/contentService';
 import { formatScheduledIST } from '@/lib/dateUtils';
+import { toast } from 'sonner';
 
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
 const now = new Date();
-const staticEvents = [
-  { title: 'LinkedIn Post: AI Trends', start: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0), end: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30) },
-  { title: 'Twitter Thread', start: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 14, 0), end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 14, 30) },
-  { title: 'Blog Draft Review', start: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2, 9, 0), end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2, 10, 0) },
-  { title: 'Instagram Carousel', start: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 16, 0), end: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 16, 30) },
-  { title: 'Newsletter Send', start: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 11, 0), end: new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 11, 30) },
-];
+// Static events removed as per user request to remove dummy schedulers.
 
 const upcomingTasks = [
   { task: 'Generate weekly report', agent: 'Analytics Agent', time: 'In 2 hours' },
@@ -49,24 +45,80 @@ const Scheduler = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.user_id) { setLoading(false); return; }
-    getScheduledPosts(user.user_id)
-      .then(setScheduledPosts)
-      .catch(() => {/* silently fail */ })
-      .finally(() => setLoading(false));
+    fetchPosts();
   }, [user?.user_id]);
 
-  // Build calendar events from real scheduled posts (add on top of static ones)
-  const scheduledEvents = scheduledPosts
+  const fetchPosts = () => {
+    if (!user?.user_id) { setLoading(false); return; }
+    setLoading(true);
+    getScheduledPosts(user.user_id)
+      .then(setScheduledPosts)
+      .catch(() => { toast.error("Failed to load scheduled posts"); })
+      .finally(() => setLoading(false));
+  };
+
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedCaption, setEditedCaption] = useState('');
+
+  const handleOpenModal = (post: Post) => {
+    setSelectedPost(post);
+    setEditedCaption(post.caption);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedPost(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedPost?._id) return;
+    setIsSaving(true);
+    try {
+      await updatePost(selectedPost._id, { caption: editedCaption });
+      toast.success("Post updated successfully");
+      fetchPosts();
+      handleCloseModal();
+    } catch (err) {
+      toast.error("Failed to update post");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPost?._id) return;
+    if (!confirm("Are you sure you want to cancel this scheduled post?")) return;
+    setIsSaving(true);
+    try {
+      // Deleting a scheduled post in this context means cancelling it (changing status)
+      await updatePost(selectedPost._id, { status: 'cancelled', is_draft: true });
+      toast.success("Scheduled post cancelled");
+      fetchPosts();
+      handleCloseModal();
+    } catch (err) {
+      toast.error("Failed to cancel post");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Build calendar events from real scheduled posts
+  const allEvents = scheduledPosts
     .filter((p) => p.scheduled_at)
     .map((p) => {
       const start = new Date(p.scheduled_at!);
       const end = new Date(start.getTime() + 30 * 60 * 1000);
       const label = cleanTopic(p.topic);
-      return { title: `${p.platform}: ${label.slice(0, 45)}`, start, end };
+      return {
+        title: `${p.platform}: ${label.slice(0, 45)}`,
+        start,
+        end,
+        resource: p // Store full post for selection
+      };
     });
-
-  const allEvents = [...staticEvents, ...scheduledEvents];
 
   return (
     <DashboardLayout>
@@ -98,6 +150,7 @@ const Scheduler = () => {
                 endAccessor="end"
                 defaultView="week"
                 views={['week', 'month', 'day']}
+                onSelectEvent={(event: any) => handleOpenModal(event.resource)}
                 style={{ height: '100%' }}
               />
             </div>
@@ -190,7 +243,8 @@ const Scheduler = () => {
                     key={post._id}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-3 hover:border-primary/30 transition-colors"
+                    onClick={() => handleOpenModal(post)}
+                    className="rounded-xl border border-border/50 bg-muted/20 p-4 space-y-3 hover:border-primary/30 transition-colors cursor-pointer group"
                   >
                     {/* Header row */}
                     <div className="flex items-center justify-between">
@@ -227,6 +281,127 @@ const Scheduler = () => {
             </div>
           )}
         </motion.div>
+
+        {/* ── Post Detail Modal ── */}
+        <AnimatePresence>
+          {isModalOpen && selectedPost && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={handleCloseModal}
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative w-full max-w-2xl glass-card-glow p-0 overflow-hidden"
+              >
+                {/* Modal Header */}
+                <div className="p-4 border-b border-border/50 flex items-center justify-between bg-muted/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center neon-glow">
+                      {platformIcon(selectedPost.platform)}
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-foreground">Post Details</h3>
+                      <p className="text-xs text-muted-foreground">{selectedPost.platform} • {cleanTopic(selectedPost.topic)}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleCloseModal}
+                    className="w-8 h-8 rounded-lg bg-muted/50 flex items-center justify-center hover:bg-muted transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                  {/* Status & Time */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Status</label>
+                      <div className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-500/20">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span className="text-sm font-medium">Scheduled</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Scheduled For</label>
+                      <div className="flex items-center gap-2 text-foreground bg-muted/30 px-3 py-2 rounded-xl border border-border/50">
+                        <Clock className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium">
+                          {(() => {
+                            const { date, time } = formatScheduledIST(selectedPost.scheduled_at!);
+                            return `${date} · ${time}`;
+                          })()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Caption Editor */}
+                  <div className="space-y-2">
+                    <label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Post Caption</label>
+                    <textarea
+                      value={editedCaption}
+                      onChange={(e) => setEditedCaption(e.target.value)}
+                      className="w-full h-48 bg-background/50 border border-border rounded-xl p-4 text-sm text-foreground focus:ring-2 focus:ring-primary/20 transition-all outline-none resize-none"
+                      placeholder="Edit your post caption..."
+                    />
+                  </div>
+
+                  {/* Hashtags & CTA (Read-only for now) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Hashtags</label>
+                      <div className="bg-muted/30 p-3 rounded-xl border border-border/50 text-xs font-mono text-primary/80 line-clamp-2">
+                        {selectedPost.hashtags}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Target CTA</label>
+                      <div className="bg-muted/30 p-3 rounded-xl border border-border/50 text-sm text-foreground/80">
+                        {selectedPost.cta}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 bg-muted/10 border-t border-border/50 flex items-center justify-between gap-3">
+                  <button
+                    onClick={handleDelete}
+                    disabled={isSaving}
+                    className="h-11 px-5 rounded-xl border border-destructive/30 text-destructive text-sm font-medium hover:bg-destructive/10 transition-colors flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Cancel Schedule
+                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleCloseModal}
+                      className="h-11 px-5 rounded-xl border border-border text-foreground text-sm font-medium hover:bg-muted/50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={isSaving || editedCaption === selectedPost.caption}
+                      className="h-11 px-8 rounded-xl gradient-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Save Changes
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </DashboardLayout>
   );
