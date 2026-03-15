@@ -16,13 +16,13 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   Sparkles, Zap, Loader2, AlertCircle, Copy, Check,
-  RefreshCw, Instagram, Linkedin, Hash, TrendingUp,
+  RefreshCw, Instagram, Linkedin, Twitter, Hash, TrendingUp,
   FileText, ChevronDown, Trash2, Clock, ImageIcon,
   Target, MessageSquare, Layers, GripVertical, Eye,
   RotateCcw, ChevronRight, CalendarClock, X,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
-import { generateFullPost, getDrafts, updatePost } from '@/services/contentService';
+import { generateFullPost, getDrafts, updatePost, getPostingTimes } from '@/services/contentService';
 import type { FullPostRequest, FullPostResponse, Post } from '@/services/contentService';
 import { toast } from 'sonner';
 import { todayIST, nowTimeIST, nextHourIST, formatTimeIST } from '@/lib/dateUtils';
@@ -46,7 +46,7 @@ const LENGTH_PROMPTS: Record<LengthValue, string> = {
   long: 'Write a long, detailed post (300-400 words)',
 };
 
-const PLATFORMS = ['LinkedIn', 'Instagram'] as const;
+const PLATFORMS = ['LinkedIn', 'Instagram', 'Twitter'] as const;
 const TONES = ['Professional', 'Friendly', 'Promotional'] as const;
 const GOALS = ['Engagement', 'Sales', 'Awareness'] as const;
 const IMG_STYLES = ['Minimal', 'Corporate', 'Story'] as const;
@@ -121,7 +121,8 @@ const ScoreRing = ({ score }: { score: number }) => {
 
 const platformIcon = (p: string) =>
   p === 'LinkedIn' ? <Linkedin className="w-3.5 h-3.5" /> :
-    p === 'Instagram' ? <Instagram className="w-3.5 h-3.5" /> : null;
+    p === 'Instagram' ? <Instagram className="w-3.5 h-3.5" /> :
+      p === 'Twitter' ? <Twitter className="w-3.5 h-3.5" /> : null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ScheduleModal
@@ -129,18 +130,32 @@ const platformIcon = (p: string) =>
 
 interface ScheduleModalProps {
   open: boolean;
+  platform: string;
   onClose: () => void;
   onConfirm: (date: string, time: string) => Promise<void>;
   isSubmitting: boolean;
 }
 
-const ScheduleModal = ({ open, onClose, onConfirm, isSubmitting }: ScheduleModalProps) => {
+const ScheduleModal = ({ open, platform, onClose, onConfirm, isSubmitting }: ScheduleModalProps) => {
   const todayStr = todayIST();
   const nowTimeStr = nowTimeIST();
 
   const [date, setDate] = useState(todayStr);
   const [time, setTime] = useState(() => nextHourIST());
   const [err, setErr] = useState('');
+  
+  const [suggestedTimes, setSuggestedTimes] = useState<string[]>([]);
+  const [isLoadingTimes, setIsLoadingTimes] = useState(false);
+
+  useEffect(() => {
+    if (open && platform) {
+      setIsLoadingTimes(true);
+      getPostingTimes(platform)
+        .then(setSuggestedTimes)
+        .catch(() => setSuggestedTimes([]))
+        .finally(() => setIsLoadingTimes(false));
+    }
+  }, [open, platform]);
 
   if (!open) return null;
 
@@ -214,6 +229,27 @@ const ScheduleModal = ({ open, onClose, onConfirm, isSubmitting }: ScheduleModal
                 className="w-full h-10 px-3 rounded-xl bg-muted/40 border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
             </div>
+            
+            {/* Suggested Times */}
+            {suggestedTimes.length > 0 && (
+               <div className="space-y-1.5 pt-1">
+                 <div className="flex items-center gap-2">
+                   <label className="text-xs font-medium text-muted-foreground">Suggested {platform} Times</label>
+                   {isLoadingTimes && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+                 </div>
+                 <div className="flex flex-wrap gap-2">
+                   {suggestedTimes.map((t) => (
+                     <button
+                       key={t}
+                       onClick={() => { setDate(todayStr); setTime(t); setErr(''); }}
+                       className="px-2.5 py-1.5 rounded-lg border border-primary/30 bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+                     >
+                       {t}
+                     </button>
+                   ))}
+                 </div>
+               </div>
+            )}
 
             {/* Validation error */}
             {err && (
@@ -274,7 +310,7 @@ const Content = () => {
   const lastReq = useRef<FullPostRequest | null>(null);
 
   // ── Formatted preview tab ─────────────────────────────────────────────────
-  const [formattedTab, setFormattedTab] = useState<'linkedin' | 'instagram'>('linkedin');
+  const [formattedTab, setFormattedTab] = useState<'linkedin' | 'instagram' | 'twitter'>('linkedin');
 
   // ── Schedule ──────────────────────────────────────────────────────────────
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -284,7 +320,8 @@ const Content = () => {
     if (!result?.post_id) return;
     setIsScheduling(true);
     try {
-      const scheduledAt = new Date(`${date}T${time}`).toISOString();
+      // Send naive ISO string to backend so it treats it as IST
+      const scheduledAt = `${date}T${time}:00`;
       await updatePost(result.post_id, { scheduled_at: scheduledAt, status: 'scheduled', is_draft: false });
       toast.success('✅ Post successfully scheduled!');
       setScheduleOpen(false);
@@ -292,6 +329,32 @@ const Content = () => {
       toast.error('Failed to schedule post. Please try again.');
     } finally {
       setIsScheduling(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!result?.post_id) return;
+    try {
+      await updatePost(result.post_id, { 
+        caption: editCap, hashtags: editHash, cta: editCta, 
+        status: 'draft', is_draft: true 
+      });
+      toast.success('Draft saved successfully!');
+    } catch {
+      toast.error('Failed to save draft.');
+    }
+  };
+
+  const handlePublishNow = async () => {
+    if (!result?.post_id) return;
+    try {
+      await updatePost(result.post_id, { 
+        caption: editCap, hashtags: editHash, cta: editCta, 
+        status: 'published', is_draft: false 
+      });
+      toast.success('Post published successfully!');
+    } catch {
+      toast.error('Failed to publish post.');
     }
   };
 
@@ -471,7 +534,7 @@ const Content = () => {
       text = result?.formatted[formattedTab] ?? `${editCap}\n\n${editHash}\n\n${editCta}`;
     } else {
       // 'full' — use the platform-formatted output that matches the selected platform
-      const key = platform.toLowerCase() as 'linkedin' | 'instagram';
+      const key = platform.toLowerCase() as 'linkedin' | 'instagram' | 'twitter';
       text = result?.formatted[key] ?? `${editCap}\n\n${editHash}\n\n${editCta}`;
     }
     await navigator.clipboard.writeText(text);
@@ -823,6 +886,15 @@ const Content = () => {
                             >
                               <Instagram className="w-3 h-3" />Instagram
                             </button>
+                            <button
+                              onClick={() => setFormattedTab('twitter')}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${formattedTab === 'twitter'
+                                ? 'bg-primary/15 text-primary border border-primary/30'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                                }`}
+                            >
+                              <Twitter className="w-3 h-3" />Twitter
+                            </button>
                           </div>
                           <button
                             onClick={() => handleCopy('formatted')}
@@ -835,7 +907,7 @@ const Content = () => {
                         {/* Content */}
                         <div className="p-4 max-h-48 overflow-y-auto">
                           <p className="text-xs text-foreground/85 leading-relaxed whitespace-pre-wrap font-mono">
-                            {formattedTab === 'linkedin' ? result!.formatted.linkedin : result!.formatted.instagram}
+                            {result!.formatted[formattedTab]}
                           </p>
                         </div>
                       </div>
@@ -878,6 +950,24 @@ const Content = () => {
                             </p>
                           )}
                         </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-3 pt-1">
+                        {/* Save Draft */}
+                        <button
+                          onClick={handleSaveDraft}
+                          className="flex-1 h-10 rounded-xl border border-border bg-muted/30 text-foreground text-sm font-medium hover:bg-muted/60 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <FileText className="w-4 h-4" />Save Draft
+                        </button>
+                        
+                        {/* Publish Now */}
+                        <button
+                          onClick={handlePublishNow}
+                          className="flex-1 h-10 rounded-xl gradient-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all flex items-center justify-center gap-2"
+                        >
+                          <Zap className="w-4 h-4" />Publish Now
+                        </button>
                       </div>
                     </motion.div>
                   )}
@@ -1014,22 +1104,18 @@ const Content = () => {
                             {item.result.formatted && (
                               <div className="space-y-1.5">
                                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                                  {item.platform === 'LinkedIn'
-                                    ? <Linkedin className="w-3 h-3" />
-                                    : <Instagram className="w-3 h-3" />}
+                                  {platformIcon(item.platform)}
                                   Formatted ({item.platform})
                                 </p>
                                 <p className="text-xs text-foreground/80 bg-background/40 rounded-lg p-2.5 whitespace-pre-wrap font-mono max-h-32 overflow-y-auto leading-relaxed">
-                                  {item.platform === 'LinkedIn'
-                                    ? item.result.formatted.linkedin
-                                    : item.result.formatted.instagram}
+                                  {item.result.formatted?.[item.platform.toLowerCase() as 'linkedin' | 'instagram' | 'twitter']}
                                 </p>
                               </div>
                             )}
                             {/* Copy from history */}
                             <button
                               onClick={async () => {
-                                const key = item.platform.toLowerCase() as 'linkedin' | 'instagram';
+                                const key = item.platform.toLowerCase() as 'linkedin' | 'instagram' | 'twitter';
                                 const text = item.result.formatted?.[key]
                                   ?? `${item.editedCaption}\n\n${item.editedHashtags}\n\n${item.editedCta}`;
                                 await navigator.clipboard.writeText(text);
@@ -1055,6 +1141,7 @@ const Content = () => {
       {/* Schedule Modal — rendered outside DashboardLayout to escape stacking context */}
       <ScheduleModal
         open={scheduleOpen}
+        platform={platform}
         onClose={() => setScheduleOpen(false)}
         onConfirm={handleScheduleConfirm}
         isSubmitting={isScheduling}

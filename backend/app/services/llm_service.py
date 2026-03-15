@@ -29,6 +29,18 @@ class LLMService:
 
     def _build_composer_prompt(self, topic: str, platform: str, tone: str, goal: str) -> str:
         """Builds a structured prompt for the AI Content Composer"""
+        
+        platform_rules = ""
+        if platform.lower() == "instagram":
+            platform_rules = """
+        EXTRA INSTAGRAM RULES:
+        - Use a Gen Z friendly tone (casual, conversational slang is allowed)
+        - Use emojis naturally
+        - Include a strong hook in the first line
+        - Keep paragraphs very short
+        - End with an engaging question
+        """
+
         return f"""
         You are a senior social media strategist. Generate a high-performing post for {platform}.
         
@@ -36,6 +48,7 @@ class LLMService:
         Tone: {tone}
         Goal: {goal}
         Platform: {platform}
+        {platform_rules}
         
         Requirements:
         1. Create a compelling caption suitable for {platform}.

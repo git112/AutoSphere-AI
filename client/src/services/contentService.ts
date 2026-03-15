@@ -11,13 +11,14 @@ import api from './api';
 export interface PostFormattedContent {
     instagram: string;
     linkedin: string;
+    twitter?: string;
 }
 
 export interface Post {
     _id?: string;
     user_id: string;
     topic: string;
-    platform: 'Instagram' | 'LinkedIn';
+    platform: 'Instagram' | 'LinkedIn' | 'Twitter';
     tone: 'Professional' | 'Friendly' | 'Promotional';
     goal: 'Engagement' | 'Sales' | 'Awareness';
     caption: string;
@@ -35,7 +36,7 @@ export interface Post {
 export interface FullPostRequest {
     user_id: string;
     topic: string;
-    platform: 'Instagram' | 'LinkedIn';
+    platform: 'Instagram' | 'LinkedIn' | 'Twitter';
     tone: 'Professional' | 'Friendly' | 'Promotional';
     goal: 'Engagement' | 'Sales' | 'Awareness';
     image_style: 'Minimal' | 'Corporate' | 'Story';
@@ -115,6 +116,15 @@ export const saveDraft = async (
  */
 export const getScheduledPosts = async (user_id: string): Promise<Post[]> => {
     const { data } = await api.get<Post[]>(`/api/content/scheduled/${user_id}`);
+    return data;
+};
+
+/**
+ * GET /api/content/posting-times/{platform}
+ * Returns suggested posting times for a platform.
+ */
+export const getPostingTimes = async (platform: string): Promise<string[]> => {
+    const { data } = await api.get<string[]>(`/api/content/posting-times/${platform}`);
     return data;
 };
 

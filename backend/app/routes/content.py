@@ -14,6 +14,7 @@ from app.services.image_service import image_service
 from app.services.platform_formatter import platform_formatter
 from app.services.engagement_service import engagement_service
 from app.services.user_service import user_service
+from app.services.posting_time_service import posting_time_service
 from app.models.post_model import Post, PostFormattedContent
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ class FullPostRequest(BaseModel):
     """Input parameters for AI Post Composer"""
     user_id: str
     topic: str
-    platform: Literal["Instagram", "LinkedIn"]
+    platform: Literal["Instagram", "LinkedIn", "Twitter"]
     tone: Literal["Professional", "Friendly", "Promotional"]
     goal: Literal["Engagement", "Sales", "Awareness"]
     image_style: Literal["Minimal", "Corporate", "Story"]
@@ -73,6 +74,7 @@ async def generate_full_post(request: FullPostRequest):
         # 3. Generate platform-specific formats
         formatted_ig = platform_formatter.format_instagram(caption, hashtags)
         formatted_li = platform_formatter.format_linkedin(caption, hashtags, cta)
+        formatted_tw = platform_formatter.format_twitter(caption, hashtags)
 
         # 4. Calculate engagement score
         score = engagement_service.calculate_score(caption, hashtags, cta)
@@ -94,7 +96,8 @@ async def generate_full_post(request: FullPostRequest):
             cta=cta,
             formatted=PostFormattedContent(
                 instagram=formatted_ig,
-                linkedin=formatted_li
+                linkedin=formatted_li,
+                twitter=formatted_tw
             ),
             image_url=image_url,
             engagement_score_estimate=score,
@@ -114,7 +117,8 @@ async def generate_full_post(request: FullPostRequest):
             cta=cta,
             formatted=PostFormattedContent(
                 instagram=formatted_ig,
-                linkedin=formatted_li
+                linkedin=formatted_li,
+                twitter=formatted_tw
             ),
             image_url=image_url,
             engagement_score_estimate=score,
@@ -138,7 +142,18 @@ async def update_post(post_id: str, updates: dict):
         # Handle datetime conversion if scheduled_at is provided
         if "scheduled_at" in updates and updates["scheduled_at"]:
             try:
-                updates["scheduled_at"] = datetime.fromisoformat(updates["scheduled_at"].replace("Z", "+00:00"))
+                from zoneinfo import ZoneInfo
+                ist_zone = ZoneInfo("Asia/Kolkata")
+                raw_time = updates["scheduled_at"].replace("Z", "")
+                dt_naive = datetime.fromisoformat(raw_time)
+                dt_ist = dt_naive.replace(tzinfo=ist_zone)
+                dt_utc = dt_ist.astimezone(ZoneInfo("UTC"))
+                updates["scheduled_at"] = dt_utc
+                
+                # Queue the job if status is scheduled
+                if updates.get("status") == "scheduled":
+                    from app.services.scheduler_service import scheduler_service
+                    scheduler_service.schedule_post(post_id, dt_utc)
             except ValueError:
                 pass
         
@@ -190,11 +205,25 @@ async def get_scheduled_posts(user_id: str):
     """Retrieves all scheduled posts for a given user, sorted by scheduled_at asc"""
     try:
         from app.database.mongodb import mongodb
+        from zoneinfo import ZoneInfo
+        ist_zone = ZoneInfo("Asia/Kolkata")
+        
         cursor = mongodb.posts.find({"user_id": user_id, "status": "scheduled"}).sort("scheduled_at", 1)
         posts = await cursor.to_list(length=100)
         for p in posts:
             p["_id"] = str(p["_id"])
+            if p.get("scheduled_at"):
+                dt_utc = p["scheduled_at"]
+                if dt_utc.tzinfo is None:
+                    dt_utc = dt_utc.replace(tzinfo=ZoneInfo("UTC"))
+                dt_ist = dt_utc.astimezone(ist_zone)
+                p["scheduled_at"] = dt_ist
         return posts
     except Exception as e:
         logger.error(f"Failed to fetch scheduled posts: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/posting-times/{platform}", response_model=List[str])
+async def get_posting_times(platform: str):
+    """Retrieves suggested posting times for a platform"""
+    return posting_time_service.get_best_posting_times(platform)
