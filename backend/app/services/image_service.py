@@ -60,11 +60,23 @@ class ImageService:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(api_url, headers=headers, json={"inputs": prompt})
                 if response.status_code == 200:
-                    # In a real app, you'd save this image to S3/disk and return the URL
-                    # Here we return a dummy URL or path for the MVP logic
-                    logger.info("HuggingFace image generation successful")
-                    return "https://media.licdn.com/dms/image/D4D12AQG..." # Placeholder
+                    import uuid
+                    import os
                     
+                    # Create directory if not exists
+                    save_dir = r"d:\AutoSphere-AI\client\public\generated_images"
+                    os.makedirs(save_dir, exist_ok=True)
+                    
+                    filename = f"{uuid.uuid4().hex}.png"
+                    filepath = os.path.join(save_dir, filename)
+                    
+                    with open(filepath, "wb") as f:
+                        f.write(response.content)
+                        
+                    logger.info("HuggingFace image generation successful")
+                    return f"/generated_images/{filename}"
+                else:
+                    logger.warning(f"HuggingFace raw response: {response.status_code} - {response.text}")
         except Exception as e:
             logger.error(f"HuggingFace generation failed: {e}")
         return None
