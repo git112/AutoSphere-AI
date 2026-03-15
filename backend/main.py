@@ -33,12 +33,17 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting ABGA SaaS Platform - AI Content Generation Module")
     await Database.connect_db()
+    
+    from app.services.scheduler_service import scheduler_service
+    scheduler_service.start()
+    
     logger.info("Application startup complete")
     
     yield
     
     # Shutdown
     logger.info("Shutting down application")
+    scheduler_service.shutdown()
     await Database.close_db()
     logger.info("Application shutdown complete")
 
