@@ -11,6 +11,7 @@ class PostFormattedContent(BaseModel):
     """Platform-specific formatted content"""
     instagram: str
     linkedin: str
+    twitter: Optional[str] = None
 
 class Post(BaseModel):
     """
@@ -47,7 +48,8 @@ class Post(BaseModel):
                 "cta": "Link in bio",
                 "formatted": {
                     "instagram": "Exploring AI trends... \n\n#AI #Tech",
-                    "linkedin": "Exploring AI trends... \n\n#AI #Tech"
+                    "linkedin": "Exploring AI trends... \n\n#AI #Tech",
+                    "twitter": "Exploring AI trends... #AI #Tech"
                 },
                 "engagement_score_estimate": 85,
                 "is_draft": True
