@@ -25,6 +25,10 @@ pyjwt==2.8.0
 # Email
 # Note: Using built-in smtplib for email sending
 
+# HTML Parsing (SEO Module)
+beautifulsoup4>=4.12.0
+lxml>=5.1.0
+
 # Utilities
 python-multipart==0.0.6
 apscheduler

@@ -13,7 +13,7 @@ from contextlib import asynccontextmanager
 import logging
 
 from app.database import Database
-from app.routes import content_router, auth_router
+from app.routes import content_router, auth_router, seo_router
 from app.middleware import validation_exception_handler, general_exception_handler
 
 # Configure logging
@@ -72,6 +72,7 @@ app.add_exception_handler(Exception, general_exception_handler)
 # Register routers
 app.include_router(auth_router)
 app.include_router(content_router)
+app.include_router(seo_router)
 
 
 @app.get("/")

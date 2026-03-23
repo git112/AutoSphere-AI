@@ -13,6 +13,7 @@ import Scheduler from "./pages/Scheduler";
 import Analytics from "./pages/Analytics";
 import AgentControl from "./pages/AgentControl";
 import Settings from "./pages/Settings";
+import SeoOptimizer from "./pages/SeoOptimizer";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from "./stores/authStore";
 import { useAppStore } from "./stores/appStore";
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/scheduler" element={<ProtectedRoute><Scheduler /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/agents" element={<ProtectedRoute><AgentControl /></ProtectedRoute>} />
+            <Route path="/seo-optimizer" element={<ProtectedRoute><SeoOptimizer /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />

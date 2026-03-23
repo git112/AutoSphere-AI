@@ -10,11 +10,13 @@ import {
   Settings,
   ChevronLeft,
   Orbit,
+  Search,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/content', label: 'Content & Social', icon: FileText },
+  { path: '/seo-optimizer', label: 'SEO Optimizer', icon: Search },
   { path: '/scheduler', label: 'Scheduler', icon: CalendarDays },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/agents', label: 'Agent Control', icon: Bot },
