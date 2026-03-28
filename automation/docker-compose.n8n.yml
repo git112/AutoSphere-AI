@@ -1,0 +1,25 @@
+# n8n for local outreach automation. From repo root:
+#   docker compose -f automation/docker-compose.n8n.yml up
+#
+# UI: http://localhost:5678
+# You MUST import the workflow (UI or: npm run n8n:import-outreach) and ACTIVATE it, or webhooks stay unregistered.
+# N8N_WEBHOOK_URL=http://localhost:5678/webhook/outreach-campaign in backend/.env
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=UTC
+      - BACKEND_URL=http://host.docker.internal:8000
+      - WHATSAPP_URL=http://host.docker.internal:8001
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/import-workflows:ro
+
+volumes:
+  n8n_data:
