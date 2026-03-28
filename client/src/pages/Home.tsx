@@ -35,7 +35,7 @@ const Home = () => {
   const { theme, toggleTheme } = useAppStore();
 
   return (
-    <div className="min-h-screen space-bg nebula-glow relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden">
       {/* Ambient glow orbs */}
       <div className="absolute top-20 left-1/3 w-[500px] h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-40 right-1/4 w-96 h-96 bg-neon-cyan/5 rounded-full blur-3xl pointer-events-none" />

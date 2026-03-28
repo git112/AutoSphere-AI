@@ -18,6 +18,7 @@ import Outreach from "./pages/Outreach";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from "./stores/authStore";
 import { useAppStore } from "./stores/appStore";
+import AnoAI from "@/components/ui/animated-shader-background";
 
 
 const queryClient = new QueryClient({
@@ -85,6 +86,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeSync />
+    <AnoAI />
     <TooltipProvider>
       <Toaster />
       <Sonner />

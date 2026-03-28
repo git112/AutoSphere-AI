@@ -11,7 +11,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { sidebarOpen } = useAppStore();
 
   return (
-    <div className="min-h-screen space-bg">
+    <div className="min-h-screen">
       <Sidebar />
       <motion.div
         initial={false}
@@ -20,7 +20,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         className="min-h-screen flex flex-col max-lg:!ml-0"
       >
         <Topbar />
-        <main className="flex-1 p-4 lg:p-6 nebula-glow relative">
+        <main className="flex-1 p-4 lg:p-6 relative">
           <div className="relative z-10">
             {children}
           </div>
