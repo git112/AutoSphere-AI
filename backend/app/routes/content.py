@@ -157,6 +157,13 @@ async def update_post(post_id: str, updates: dict):
             except ValueError:
                 pass
         
+        # Immediate publish
+        if updates.get("status") == "published" and "scheduled_at" not in updates:
+            from app.services.scheduler_service import scheduler_service
+            # Run the job synchronously or schedule it for immediate execution
+            import asyncio
+            asyncio.create_task(scheduler_service.publish_post_job(post_id))
+            
         result = await mongodb.posts.update_one(
             {"_id": ObjectId(post_id)},
             {"$set": updates}

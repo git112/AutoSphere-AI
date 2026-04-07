@@ -1,7 +1,9 @@
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { motion } from 'framer-motion';
-import { Linkedin, Chrome, Facebook, Key, Brain, Thermometer, Zap, AlertTriangle, RotateCcw } from 'lucide-react';
-import { useState } from 'react';
+import { Linkedin, Chrome, Facebook, Key, Brain, Thermometer, Zap, AlertTriangle, RotateCcw, Instagram, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { getInstagramAuthUrl, checkInstagramStatus } from '@/services/instagramService';
+import { toast } from 'sonner';
 
 const integrations = [
   { name: 'LinkedIn', icon: Linkedin, connected: true, color: 'text-blue-400' },
@@ -15,6 +17,36 @@ const SettingsPage = () => {
   const [temperature, setTemperature] = useState(0.7);
   const [turbo, setTurbo] = useState(true);
   const [model, setModel] = useState('gpt-4o');
+  
+  const [isIgConnected, setIsIgConnected] = useState(false);
+  const [isIgLoading, setIsIgLoading] = useState(true);
+
+  useEffect(() => {
+    // Check callback status
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ig_success') === 'true') {
+      toast.success('Instagram successfully connected!');
+      // Clean up url
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (params.get('ig_error')) {
+      toast.error(`Instagram connection failed: ${params.get('ig_error')}`);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    checkInstagramStatus().then(status => {
+      setIsIgConnected(status);
+      setIsIgLoading(false);
+    });
+  }, []);
+
+  const handleConnectInstagram = async () => {
+    try {
+      const url = await getInstagramAuthUrl();
+      window.location.href = url;
+    } catch (e) {
+      toast.error('Failed to get Instagram Auth URL');
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -37,6 +69,24 @@ const SettingsPage = () => {
                 </button>
               </div>
             ))}
+            {/* Real Instagram Integration */}
+            <div className="glass-card p-5 flex flex-col items-center gap-3 border border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.15)]">
+              <Instagram className={`w-8 h-8 ${isIgConnected ? 'text-pink-500' : 'text-muted-foreground'}`} />
+              <span className="text-sm font-medium text-foreground">Instagram</span>
+              {isIgLoading ? (
+                <div className="h-8 flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <button 
+                  onClick={!isIgConnected ? handleConnectInstagram : undefined}
+                  disabled={isIgConnected}
+                  className={`h-8 px-4 rounded-lg text-xs font-medium transition-colors ${isIgConnected ? 'bg-emerald-500/15 text-emerald-400' : 'bg-pink-500/15 text-pink-500 hover:bg-pink-500/25'}`}
+                >
+                  {isIgConnected ? 'Connected' : 'Connect'}
+                </button>
+              )}
+            </div>
           </div>
         </motion.div>
 

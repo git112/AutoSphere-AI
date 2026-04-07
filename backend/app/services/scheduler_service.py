@@ -23,16 +23,64 @@ class SchedulerService:
         """Worker function that handles actual publishing of the post."""
         try:
             from app.database.mongodb import mongodb
+            from app.database import get_db
+            from app.services.instagram_service import instagram_service
             logger.info(f"Publishing scheduled post: {post_id}")
-            # Mock publishing process. Update status to 'published'
+            
+            # Fetch the post
+            post = await mongodb.posts.find_one({"_id": ObjectId(post_id)})
+            if not post:
+                logger.warning(f"Post {post_id} not found.")
+                return
+
+            platform = post.get("platform", "").lower()
+            user_id = post.get("user_id")
+            
+            if platform == "instagram":
+                # Fetch IG account
+                db = get_db()
+                account_doc = await db["instagram_accounts"].find_one({"user_id": user_id})
+                
+                if account_doc:
+                    ig_user_id = account_doc.get("instagram_user_id")
+                    access_token = account_doc.get("access_token")
+                    image_url = post.get("image_url")
+                    caption = post.get("caption", "")
+                    
+                    if image_url:
+                        # 1. Create media
+                        creation_id, err = await instagram_service.create_media_container(
+                            ig_user_id=ig_user_id,
+                            image_url=image_url,
+                            caption=caption,
+                            access_token=access_token
+                        )
+                        
+                        if not err and creation_id:
+                            # 2. Publish media
+                            post_obj_id, pub_err = await instagram_service.publish_media(
+                                ig_user_id=ig_user_id,
+                                creation_id=creation_id,
+                                access_token=access_token
+                            )
+                            if pub_err:
+                                logger.error(f"Failed to publish IG media: {pub_err}")
+                            else:
+                                logger.info(f"Successfully published to Instagram: {post_obj_id}")
+                        else:
+                            logger.error(f"Failed to create IG media container: {err}")
+                    else:
+                        logger.error(f"Instagram requires an image_url but post {post_id} doesn't have one.")
+                else:
+                    logger.error(f"Cannot publish post {post_id}. User {user_id} has no Instagram account linked.")
+
+            # Update status to 'published'
             result = await mongodb.posts.update_one(
                 {"_id": ObjectId(post_id)},
                 {"$set": {"status": "published"}}
             )
             if result.modified_count > 0:
-                logger.info(f"Successfully published post: {post_id}")
-            else:
-                logger.warning(f"Post {post_id} not found or already published.")
+                logger.info(f"Successfully updated post {post_id} status to published")
         except Exception as e:
             logger.error(f"Error publishing post {post_id}: {e}")
 

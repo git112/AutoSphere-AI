@@ -127,6 +127,7 @@ class OutreachService:
         to_email: str,
         subject: str,
         body_text: str,
+        from_email: Optional[str] = None,
     ) -> None:
         msg = MIMEText(body_text, "plain", "utf-8")
         msg["Subject"] = subject
