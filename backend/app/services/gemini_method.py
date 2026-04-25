@@ -1,3 +1,5 @@
+import google.generativeai as genai
+
     async def generate_content_gemini(
         self,
         topic: str,
@@ -23,7 +25,7 @@
                 genai.configure(api_key=api_key)
             
             # Use Gemini 1.5 Flash model (fast and free)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-pro')
             
             prompt = self._build_prompt(topic, tone, platform)
             
