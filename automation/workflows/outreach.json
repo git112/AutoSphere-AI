@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 400],
+      "position": [
+        240,
+        400
+      ],
       "webhookId": "outreach-campaign"
     },
     {
@@ -25,17 +28,23 @@
       "name": "Respond Accepted",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [460, 260]
+      "position": [
+        460,
+        260
+      ]
     },
     {
       "parameters": {
-        "jsCode": "// Support both direct JSON body and nested body formats\nconst raw = $input.first().json;\nconst root = raw.body ?? raw;\n\n// Parse contacts - handle string or array\nlet contacts = root.contacts || [];\nif (typeof contacts === 'string') {\n  try { contacts = JSON.parse(contacts); } catch(e) { contacts = []; }\n}\nif (!Array.isArray(contacts)) contacts = [];\n\nif (contacts.length === 0) {\n  throw new Error('No contacts provided. Send at least one contact in the contacts array.');\n}\n\nconst enableAi = root.enable_ai === true || root.enable_ai === 'true';\n\nreturn contacts.map((c) => ({\n  json: {\n    name: c.name || '',\n    email: c.email || '',\n    phone: c.phone || '',\n    company: c.company || '',\n    _campaign: {\n      campaign_name: root.campaign_name || 'Campaign',\n      channel: root.channel || 'email',\n      subject: root.subject || 'Hello',\n      message: root.message || '',\n      enable_ai: enableAi,\n      smtp_host: root.smtp_host || '',\n      smtp_port: root.smtp_port || 587,\n      smtp_user: root.smtp_user || '',\n      smtp_pass: root.smtp_pass || ''\n    }\n  }\n}));"
+        "jsCode": "// Support both direct JSON body and nested body formats\nconst raw = $input.first().json;\nconst root = raw.body ?? raw;\n\n// Parse contacts - handle string or array\nlet contacts = root.contacts || [];\nif (typeof contacts === 'string') {\n  try { contacts = JSON.parse(contacts); } catch(e) { contacts = []; }\n}\nif (!Array.isArray(contacts)) contacts = [];\n\nif (contacts.length === 0) {\n  throw new Error('No contacts provided. Send at least one contact in the contacts array.');\n}\n\nconst enableAi = root.enable_ai === true || root.enable_ai === 'true';\n\n// Parse attachments\nlet attachments = root.attachments || [];\nif (typeof attachments === 'string') {\n  try { attachments = JSON.parse(attachments); } catch(e) { attachments = []; }\n}\nif (!Array.isArray(attachments)) attachments = [];\n\nreturn contacts.map((c) => ({\n  json: {\n    name: c.name || '',\n    email: c.email || '',\n    phone: c.phone || '',\n    company: c.company || '',\n    _campaign: {\n      campaign_name: root.campaign_name || 'Campaign',\n      channel: root.channel || 'email',\n      subject: root.subject || 'Hello',\n      message: root.message || '',\n      enable_ai: enableAi,\n      smtp_host: root.smtp_host || '',\n      smtp_port: root.smtp_port || 587,\n      smtp_user: root.smtp_user || '',\n      smtp_pass: root.smtp_pass || '',\n      attachments: attachments\n    }\n  }\n}));"
       },
       "id": "code-expand-contacts",
       "name": "Set Campaign Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 460]
+      "position": [
+        460,
+        460
+      ]
     },
     {
       "parameters": {
@@ -46,7 +55,10 @@
       "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [700, 460]
+      "position": [
+        700,
+        460
+      ]
     },
     {
       "parameters": {
@@ -63,32 +75,10 @@
       "name": "IF AI Enabled",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [920, 460]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: 'Write a short professional outreach email. Personalize it for ' + ($json.name || 'the contact') + ' at ' + ($json.company || 'their company') + '. Use this as the base message: ' + ($json._campaign.message || '') }] }] }) }}",
-        "options": {}
-      },
-      "id": "http-gemini",
-      "name": "Gemini AI Message",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1140, 320]
-    },
-    {
-      "parameters": {
-        "jsCode": "const g = $input.first().json;\nconst item = $('Split In Batches').item.json;\nconst text = g.candidates?.[0]?.content?.parts?.[0]?.text || item._campaign.message || '';\nreturn [{ json: { ...item, final_message: text } }];"
-      },
-      "id": "code-parse-gemini",
-      "name": "Parse AI Response",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1360, 320]
+      "position": [
+        920,
+        460
+      ]
     },
     {
       "parameters": {
@@ -98,7 +88,10 @@
       "name": "Template Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1140, 560]
+      "position": [
+        1140,
+        460
+      ]
     },
     {
       "parameters": {
@@ -108,7 +101,10 @@
       "name": "Channel Flags",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1580, 460]
+      "position": [
+        1360,
+        460
+      ]
     },
     {
       "parameters": {
@@ -125,7 +121,10 @@
       "name": "IF Send Email",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [1800, 460]
+      "position": [
+        1580,
+        460
+      ]
     },
     {
       "parameters": {
@@ -133,7 +132,7 @@
         "url": "={{ ($env.BACKEND_URL || 'http://host.docker.internal:8000') + '/api/outreach/relay-smtp' }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ smtp_host: $json._campaign.smtp_host, smtp_port: $json._campaign.smtp_port || 587, smtp_user: $json._campaign.smtp_user, smtp_pass: $json._campaign.smtp_pass, to_email: $json.email, subject: $json._campaign.subject, body_text: $json.final_message }) }}",
+        "jsonBody": "={{ JSON.stringify({ smtp_host: $json._campaign.smtp_host, smtp_port: $json._campaign.smtp_port || 587, smtp_user: $json._campaign.smtp_user, smtp_pass: $json._campaign.smtp_pass, to_email: $json.email, subject: $json._campaign.subject, body_text: $json.final_message, attachments: $json._campaign.attachments || [] }) }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -155,7 +154,10 @@
       "name": "Email SMTP Relay",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2020, 360]
+      "position": [
+        1800,
+        360
+      ]
     },
     {
       "parameters": {
@@ -165,7 +167,10 @@
       "name": "Restore After SMTP",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2240, 360]
+      "position": [
+        2020,
+        360
+      ]
     },
     {
       "parameters": {
@@ -182,7 +187,10 @@
       "name": "IF Send WhatsApp",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [2460, 460]
+      "position": [
+        2240,
+        460
+      ]
     },
     {
       "parameters": {
@@ -199,7 +207,10 @@
       "name": "WhatsApp HTTP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2680, 400]
+      "position": [
+        2460,
+        400
+      ]
     },
     {
       "parameters": {
@@ -209,7 +220,10 @@
       "name": "Restore Campaign Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2800, 460]
+      "position": [
+        2580,
+        460
+      ]
     },
     {
       "parameters": {
@@ -220,7 +234,10 @@
       "name": "Rate Limit Wait",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [2960, 460]
+      "position": [
+        2740,
+        460
+      ]
     },
     {
       "parameters": {
@@ -250,7 +267,10 @@
       "name": "Log Results",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [3120, 460]
+      "position": [
+        2900,
+        460
+      ]
     },
     {
       "parameters": {
@@ -260,7 +280,10 @@
       "name": "Continue Batch",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3280, 460]
+      "position": [
+        3060,
+        460
+      ]
     }
   ],
   "connections": {
@@ -307,7 +330,7 @@
       "main": [
         [
           {
-            "node": "Gemini AI Message",
+            "node": "Template Message",
             "type": "main",
             "index": 0
           }
@@ -315,28 +338,6 @@
         [
           {
             "node": "Template Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Gemini AI Message": {
-      "main": [
-        [
-          {
-            "node": "Parse AI Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse AI Response": {
-      "main": [
-        [
-          {
-            "node": "Channel Flags",
             "type": "main",
             "index": 0
           }
