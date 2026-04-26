@@ -33,7 +33,6 @@ export default function Outreach() {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [enableAi, setEnableAi] = useState(false);
-  const [geminiKey, setGeminiKey] = useState('');
   const [isRephrasing, setIsRephrasing] = useState(false);
   const [variants, setVariants] = useState<string[]>([]);
   const [showVariants, setShowVariants] = useState(false);
@@ -117,7 +116,6 @@ export default function Outreach() {
   /* ------------------------------------------------------------------ */
   const handleRephrase = async () => {
     if (!message.trim()) { toast.error('Write a message first'); return; }
-    if (!geminiKey.trim()) { toast.error('Enter your Gemini API key'); return; }
     setIsRephrasing(true);
     setVariants([]);
     setShowVariants(false);
@@ -125,7 +123,7 @@ export default function Outreach() {
       const res = await fetch('http://localhost:8000/api/outreach/rephrase-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message, gemini_api_key: geminiKey, num_variants: 3 }),
+        body: JSON.stringify({ message, num_variants: 3 }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || 'Rephrase failed');
@@ -284,25 +282,14 @@ export default function Outreach() {
                   <AnimatePresence>
                     {enableAi && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-2">
-                        {/* API Key input */}
-                        <div className="flex gap-2 items-center">
-                          <div className="relative flex-1">
-                            <Key className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
-                            <input
-                              type="password"
-                              value={geminiKey}
-                              onChange={e => setGeminiKey(e.target.value)}
-                              placeholder="Gemini API key"
-                              className="w-full h-9 pl-8 pr-3 rounded-lg bg-muted/40 border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500/50 text-foreground"
-                            />
-                          </div>
+                        <div className="flex justify-end">
                           <button
                             onClick={handleRephrase}
                             disabled={isRephrasing}
-                            className="h-9 px-3 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-500/30 transition-colors disabled:opacity-50 whitespace-nowrap"
+                            className="h-9 px-4 rounded-lg bg-blue-500/20 border border-blue-500/40 text-blue-400 text-xs font-semibold flex items-center gap-1.5 hover:bg-blue-500/30 transition-colors disabled:opacity-50 whitespace-nowrap"
                           >
                             {isRephrasing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
-                            {isRephrasing ? 'Rephrasing…' : 'Rephrase'}
+                            {isRephrasing ? 'Rephrasing…' : 'Rephrase with Gemini'}
                           </button>
                         </div>
 
