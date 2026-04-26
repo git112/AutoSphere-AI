@@ -25,7 +25,7 @@ import google.generativeai as genai
                 genai.configure(api_key=api_key)
             
             # Use Gemini 1.5 Flash model (fast and free)
-            model = genai.GenerativeModel('gemini-2.5-pro')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             prompt = self._build_prompt(topic, tone, platform)
             

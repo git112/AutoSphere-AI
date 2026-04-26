@@ -207,7 +207,7 @@ class OutreachService:
             )
 
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-pro")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         prompt = f"""You are an expert B2B email copywriter.
 Rephrase the following outreach message into exactly {num_variants} distinct professional variants.

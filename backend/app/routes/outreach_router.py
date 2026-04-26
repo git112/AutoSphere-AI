@@ -63,7 +63,7 @@ class CampaignLogPayload(BaseModel):
 
 class RephraseRequest(BaseModel):
     message: str
-    gemini_api_key: str
+    gemini_api_key: Optional[str] = None
     num_variants: int = 3
 
 
@@ -143,17 +143,24 @@ async def upload_attachment(file: UploadFile = File(...)) -> Dict[str, Any]:
 async def rephrase_message(body: RephraseRequest) -> Dict[str, Any]:
     """
     Use Gemini 1.5-Flash to rephrase the campaign message into multiple
-    professional variants.  Requires the caller to supply a Gemini API key.
+    professional variants. Uses the GEMINI_API_KEY from environment by default.
     """
     if not body.message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
-    if not body.gemini_api_key.strip():
-        raise HTTPException(status_code=400, detail="Gemini API key is required.")
+    
+    # Use key from request if provided, otherwise use environment variable
+    api_key = body.gemini_api_key or os.getenv("GEMINI_API_KEY")
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=400, 
+            detail="Gemini API key not found. Please set GEMINI_API_KEY in backend environment."
+        )
 
     try:
         variants = OutreachService.gemini_rephrase(
             message=body.message,
-            api_key=body.gemini_api_key,
+            api_key=api_key,
             num_variants=min(body.num_variants, 5),
         )
         return {"status": "success", "variants": variants}

@@ -20,7 +20,7 @@ class LLMService:
         if self.system_api_key:
             genai.configure(api_key=self.system_api_key)
             
-    def _get_model(self, model_name: str = 'gemini-1.5-flash', api_key: Optional[str] = None):
+    def _get_model(self, model_name: str = 'gemini-2.5-flash', api_key: Optional[str] = None):
         """Initializes and returns the generative model"""
         if api_key:
             genai.configure(api_key=api_key)
@@ -74,7 +74,7 @@ class LLMService:
         user_api_key: Optional[str] = None
     ) -> Dict:
         """Generates structured content with error handling and fallback"""
-        models_to_try = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-pro']
+        models_to_try = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
         last_error = None
 
         for model_name in models_to_try:
